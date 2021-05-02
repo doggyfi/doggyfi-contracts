@@ -27,7 +27,7 @@ contract MasterChef is Ownable, ReentrancyGuard {
         uint256 amount;         // How many LP tokens the user has provided.
         uint256 rewardDebt;     // Reward debt. See explanation below.
         //
-        // We do some fancy math here. Basically, any point in time, the amount of FOXs
+        // We do some fancy math here. Basically, any point in time, the amount of DOGGYs
         // entitled to a user but is pending to be distributed is:
         //
         //   pending reward = (user.amount * pool.accDoggyPerShare) - user.rewardDebt
@@ -42,26 +42,26 @@ contract MasterChef is Ownable, ReentrancyGuard {
     // Info of each pool.
     struct PoolInfo {
         IERC20 lpToken;           // Address of LP token contract.
-        uint256 allocPoint;       // How many allocation points assigned to this pool. FOXs to distribute per block.
-        uint256 lastRewardBlock;  // Last block number that FOXs distribution occurs.
-        uint256 accDoggyPerShare;   // Accumulated FOXs per share, times 1e12. See below.
+        uint256 allocPoint;       // How many allocation points assigned to this pool. DOGGYs to distribute per block.
+        uint256 lastRewardBlock;  // Last block number that DOGGYs distribution occurs.
+        uint256 accDoggyPerShare;   // Accumulated DOGGYs per share, times 1e12. See below.
         uint16 depositFeeBP;      // Deposit fee in basis points
     }
 
-    // The FOX TOKEN!
+    // The DOGGY TOKEN!
     DoggyToken public doggy;
     // Dev address.
     address public devAddress;
     // Deposit Fee address
     address public feeAddress;
-    // FOX tokens created per block.
+    // DOGGY tokens created per block.
     uint256 public doggyPerBlock;
     // Bonus muliplier for early doggy makers.
     uint256 public constant BONUS_MULTIPLIER = 1;
 
-    // Initial emission rate: 1 FOX per block.
+    // Initial emission rate: 1 DOGGY per block.
     uint256 public constant INITIAL_EMISSION_RATE = 1 ether;
-    // Minimum emission rate: 0.4 FOX per block.
+    // Minimum emission rate: 0.4 DOGGY per block.
     uint256 public constant MINIMUM_EMISSION_RATE = 400 finney;
     // Reduce emission every 86,400 blocks ~ 24 hours.
     uint256 public constant EMISSION_REDUCTION_PERIOD_BLOCKS = 86400;
@@ -76,7 +76,7 @@ contract MasterChef is Ownable, ReentrancyGuard {
     mapping(uint256 => mapping(address => UserInfo)) public userInfo;
     // Total allocation points. Must be the sum of all allocation points in all pools.
     uint256 public totalAllocPoint = 0;
-    // The block number when FOX mining starts.
+    // The block number when DOGGY mining starts.
     uint256 public startBlock;
 
     // Doggy referral contract address.
@@ -126,7 +126,7 @@ contract MasterChef is Ownable, ReentrancyGuard {
         }));
     }
 
-    // Update the given pool's FOX allocation point and deposit fee. Can only be called by the owner.
+    // Update the given pool's DOGGY allocation point and deposit fee. Can only be called by the owner.
     function set(uint256 _pid, uint256 _allocPoint, uint16 _depositFeeBP, bool _withUpdate) public onlyOwner {
         require(_depositFeeBP <= 10000, "set: invalid deposit fee basis points");
         if (_withUpdate) {
@@ -142,7 +142,7 @@ contract MasterChef is Ownable, ReentrancyGuard {
         return _to.sub(_from).mul(BONUS_MULTIPLIER);
     }
 
-    // View function to see pending FOXs on frontend.
+    // View function to see pending DOGGYs on frontend.
     function pendingDoggy(uint256 _pid, address _user) external view returns (uint256) {
         PoolInfo storage pool = poolInfo[_pid];
         UserInfo storage user = userInfo[_pid][_user];
@@ -183,7 +183,7 @@ contract MasterChef is Ownable, ReentrancyGuard {
         pool.lastRewardBlock = block.number;
     }
 
-    // Deposit LP tokens to MasterChef for FOX allocation.
+    // Deposit LP tokens to MasterChef for DOGGY allocation.
     function deposit(uint256 _pid, uint256 _amount, address _referrer) public nonReentrant {
         PoolInfo storage pool = poolInfo[_pid];
         UserInfo storage user = userInfo[_pid][msg.sender];
@@ -246,7 +246,7 @@ contract MasterChef is Ownable, ReentrancyGuard {
         emit EmergencyWithdraw(msg.sender, _pid, amount);
     }
 
-    // Safe doggy transfer function, just in case if rounding error causes pool to not have enough FOXs.
+    // Safe doggy transfer function, just in case if rounding error causes pool to not have enough DOGGYs.
     function safeDoggyTransfer(address _to, uint256 _amount) internal {
         uint256 doggyBal = doggy.balanceOf(address(this));
         bool transferSuccess = false;

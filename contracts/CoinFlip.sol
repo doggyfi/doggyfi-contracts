@@ -54,7 +54,7 @@ contract CoinFlip is Ownable {
     }
     
     function bet(uint256 _amount, bool _playerChoice) public notPause checkEnough(_amount){
-        require(msg.sender == tx.origin, "Not allow")
+        require(msg.sender == tx.origin, "Not allow");
         require(_amount > 0, "Not empty bets.");
         require(_amount <= limit, "exceed limit");
         IERC20(token).safeTransferFrom(address(msg.sender), address(this), _amount);
