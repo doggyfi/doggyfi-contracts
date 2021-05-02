@@ -2,13 +2,13 @@ pragma solidity 0.6.12;
 
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "./libs/IBEP20.sol";
-import "./libs/SafeBEP20.sol";
-import "./FoxToken.sol";
+import "./libs/IERC20.sol";
+import "./libs/SafeERC20.sol";
+import "./DoggyToken.sol";
 
 contract CoinFlip is Ownable {
     using SafeMath for uint256;
-    using SafeBEP20 for IBEP20;
+    using SafeERC20 for IERC20;
 
     address public constant BURN_ADDRESS = 0x000000000000000000000000000000000000dEaD;
     address public devaddr;
@@ -25,13 +25,13 @@ contract CoinFlip is Ownable {
     uint256 public totalBurnAmount;
     uint256 public totalWinAmount;
 
-    FoxToken public token;
+    DoggyToken public token;
 
     event Bet(address indexed user, uint256 amount, bool result);
     event Withdraw(address indexed dev, uint256 amount);
 
     constructor(
-        FoxToken _token,
+        DoggyToken _token,
         uint256 _limit
     ) public { 
         token = _token;
@@ -57,7 +57,7 @@ contract CoinFlip is Ownable {
         require(msg.sender == tx.origin, "Not allow")
         require(_amount > 0, "Not empty bets.");
         require(_amount <= limit, "exceed limit");
-        IBEP20(token).safeTransferFrom(address(msg.sender), address(this), _amount);
+        IERC20(token).safeTransferFrom(address(msg.sender), address(this), _amount);
 
         bool playerChoice = _playerChoice;
 

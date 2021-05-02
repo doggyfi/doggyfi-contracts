@@ -3,24 +3,24 @@
 pragma solidity 0.6.12;
 
 import "@openzeppelin/contracts/math/SafeMath.sol";
-import "./libs/IBEP20.sol";
-import "./libs/SafeBEP20.sol";
-import "./libs/IFoxReferral.sol";
+import "./libs/IERC20.sol";
+import "./libs/SafeERC20.sol";
+import "./libs/IDoggyReferral.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
-import "./FoxToken.sol";
+import "./DoggyToken.sol";
 
-// MasterChef is the master of Fox. He can make Fox and he is a fair guy.
+// MasterChef is the master of Doggy. He can make Doggy and he is a fair guy.
 //
 // Note that it's ownable and the owner wields tremendous power. The ownership
-// will be transferred to a governance smart contract once Fox is sufficiently
+// will be transferred to a governance smart contract once Doggy is sufficiently
 // distributed and the community can show to govern itself.
 //
 // Have fun reading it. Hopefully it's bug-free. God bless.
 contract MasterChef is Ownable, ReentrancyGuard {
     using SafeMath for uint256;
-    using SafeBEP20 for IBEP20;
+    using SafeERC20 for IERC20;
 
     // Info of each user.
     struct UserInfo {
@@ -30,10 +30,10 @@ contract MasterChef is Ownable, ReentrancyGuard {
         // We do some fancy math here. Basically, any point in time, the amount of FOXs
         // entitled to a user but is pending to be distributed is:
         //
-        //   pending reward = (user.amount * pool.accFoxPerShare) - user.rewardDebt
+        //   pending reward = (user.amount * pool.accDoggyPerShare) - user.rewardDebt
         //
         // Whenever a user deposits or withdraws LP tokens to a pool. Here's what happens:
-        //   1. The pool's `accFoxPerShare` (and `lastRewardBlock`) gets updated.
+        //   1. The pool's `accDoggyPerShare` (and `lastRewardBlock`) gets updated.
         //   2. User receives the pending reward sent to his/her address.
         //   3. User's `amount` gets updated.
         //   4. User's `rewardDebt` gets updated.
@@ -41,22 +41,22 @@ contract MasterChef is Ownable, ReentrancyGuard {
 
     // Info of each pool.
     struct PoolInfo {
-        IBEP20 lpToken;           // Address of LP token contract.
+        IERC20 lpToken;           // Address of LP token contract.
         uint256 allocPoint;       // How many allocation points assigned to this pool. FOXs to distribute per block.
         uint256 lastRewardBlock;  // Last block number that FOXs distribution occurs.
-        uint256 accFoxPerShare;   // Accumulated FOXs per share, times 1e12. See below.
+        uint256 accDoggyPerShare;   // Accumulated FOXs per share, times 1e12. See below.
         uint16 depositFeeBP;      // Deposit fee in basis points
     }
 
     // The FOX TOKEN!
-    FoxToken public fox;
+    DoggyToken public doggy;
     // Dev address.
     address public devAddress;
     // Deposit Fee address
     address public feeAddress;
     // FOX tokens created per block.
-    uint256 public foxPerBlock;
-    // Bonus muliplier for early fox makers.
+    uint256 public doggyPerBlock;
+    // Bonus muliplier for early doggy makers.
     uint256 public constant BONUS_MULTIPLIER = 1;
 
     // Initial emission rate: 1 FOX per block.
@@ -79,8 +79,8 @@ contract MasterChef is Ownable, ReentrancyGuard {
     // The block number when FOX mining starts.
     uint256 public startBlock;
 
-    // Fox referral contract address.
-    IFoxReferral public foxReferral;
+    // Doggy referral contract address.
+    IDoggyReferral public doggyReferral;
     // Referral commission rate in basis points.
     uint16 public referralCommissionRate = 100;
     // Max referral commission rate: 20%.
@@ -93,15 +93,15 @@ contract MasterChef is Ownable, ReentrancyGuard {
     event ReferralCommissionPaid(address indexed user, address indexed referrer, uint256 commissionAmount);
 
     constructor(
-        FoxToken _fox,
+        DoggyToken _doggy,
         uint256 _startBlock
     ) public {
-        fox = _fox;
+        doggy = _doggy;
         startBlock = _startBlock;
 
         devAddress = msg.sender;
         feeAddress = msg.sender;
-        foxPerBlock = INITIAL_EMISSION_RATE;
+        doggyPerBlock = INITIAL_EMISSION_RATE;
     }
 
     function poolLength() external view returns (uint256) {
@@ -110,7 +110,7 @@ contract MasterChef is Ownable, ReentrancyGuard {
 
     // Add a new lp to the pool. Can only be called by the owner.
     // XXX DO NOT add the same LP token more than once. Rewards will be messed up if you do.
-    function add(uint256 _allocPoint, IBEP20 _lpToken, uint16 _depositFeeBP, bool _withUpdate) public onlyOwner {
+    function add(uint256 _allocPoint, IERC20 _lpToken, uint16 _depositFeeBP, bool _withUpdate) public onlyOwner {
         require(_depositFeeBP <= 10000, "add: invalid deposit fee basis points");
         if (_withUpdate) {
             massUpdatePools();
@@ -121,7 +121,7 @@ contract MasterChef is Ownable, ReentrancyGuard {
             lpToken: _lpToken,
             allocPoint: _allocPoint,
             lastRewardBlock: lastRewardBlock,
-            accFoxPerShare: 0,
+            accDoggyPerShare: 0,
             depositFeeBP: _depositFeeBP
         }));
     }
@@ -143,17 +143,17 @@ contract MasterChef is Ownable, ReentrancyGuard {
     }
 
     // View function to see pending FOXs on frontend.
-    function pendingFox(uint256 _pid, address _user) external view returns (uint256) {
+    function pendingDoggy(uint256 _pid, address _user) external view returns (uint256) {
         PoolInfo storage pool = poolInfo[_pid];
         UserInfo storage user = userInfo[_pid][_user];
-        uint256 accFoxPerShare = pool.accFoxPerShare;
+        uint256 accDoggyPerShare = pool.accDoggyPerShare;
         uint256 lpSupply = pool.lpToken.balanceOf(address(this));
         if (block.number > pool.lastRewardBlock && lpSupply != 0) {
             uint256 multiplier = getMultiplier(pool.lastRewardBlock, block.number);
-            uint256 foxReward = multiplier.mul(foxPerBlock).mul(pool.allocPoint).div(totalAllocPoint);
-            accFoxPerShare = accFoxPerShare.add(foxReward.mul(1e12).div(lpSupply));
+            uint256 doggyReward = multiplier.mul(doggyPerBlock).mul(pool.allocPoint).div(totalAllocPoint);
+            accDoggyPerShare = accDoggyPerShare.add(doggyReward.mul(1e12).div(lpSupply));
         }
-        return user.amount.mul(accFoxPerShare).div(1e12).sub(user.rewardDebt);
+        return user.amount.mul(accDoggyPerShare).div(1e12).sub(user.rewardDebt);
     }
 
     // Update reward variables for all pools. Be careful of gas spending!
@@ -176,10 +176,10 @@ contract MasterChef is Ownable, ReentrancyGuard {
             return;
         }
         uint256 multiplier = getMultiplier(pool.lastRewardBlock, block.number);
-        uint256 foxReward = multiplier.mul(foxPerBlock).mul(pool.allocPoint).div(totalAllocPoint);
-        fox.mint(devAddress, foxReward.div(10));
-        fox.mint(address(this), foxReward);
-        pool.accFoxPerShare = pool.accFoxPerShare.add(foxReward.mul(1e12).div(lpSupply));
+        uint256 doggyReward = multiplier.mul(doggyPerBlock).mul(pool.allocPoint).div(totalAllocPoint);
+        doggy.mint(devAddress, doggyReward.div(10));
+        doggy.mint(address(this), doggyReward);
+        pool.accDoggyPerShare = pool.accDoggyPerShare.add(doggyReward.mul(1e12).div(lpSupply));
         pool.lastRewardBlock = block.number;
     }
 
@@ -188,19 +188,19 @@ contract MasterChef is Ownable, ReentrancyGuard {
         PoolInfo storage pool = poolInfo[_pid];
         UserInfo storage user = userInfo[_pid][msg.sender];
         updatePool(_pid);
-        if (_amount > 0 && address(foxReferral) != address(0) && _referrer != address(0) && _referrer != msg.sender) {
-            foxReferral.recordReferral(msg.sender, _referrer);
+        if (_amount > 0 && address(doggyReferral) != address(0) && _referrer != address(0) && _referrer != msg.sender) {
+            doggyReferral.recordReferral(msg.sender, _referrer);
         }
         if (user.amount > 0) {
-            uint256 pending = user.amount.mul(pool.accFoxPerShare).div(1e12).sub(user.rewardDebt);
+            uint256 pending = user.amount.mul(pool.accDoggyPerShare).div(1e12).sub(user.rewardDebt);
             if (pending > 0) {
-                safeFoxTransfer(msg.sender, pending);
+                safeDoggyTransfer(msg.sender, pending);
                 payReferralCommission(msg.sender, pending);
             }
         }
         if (_amount > 0) {
             pool.lpToken.safeTransferFrom(address(msg.sender), address(this), _amount);
-            if (address(pool.lpToken) == address(fox)) {
+            if (address(pool.lpToken) == address(doggy)) {
                 uint256 transferTax = _amount.mul(2).div(100);
                 _amount = _amount.sub(transferTax);
             }
@@ -212,7 +212,7 @@ contract MasterChef is Ownable, ReentrancyGuard {
                 user.amount = user.amount.add(_amount);
             }
         }
-        user.rewardDebt = user.amount.mul(pool.accFoxPerShare).div(1e12);
+        user.rewardDebt = user.amount.mul(pool.accDoggyPerShare).div(1e12);
         emit Deposit(msg.sender, _pid, _amount);
     }
 
@@ -222,16 +222,16 @@ contract MasterChef is Ownable, ReentrancyGuard {
         UserInfo storage user = userInfo[_pid][msg.sender];
         require(user.amount >= _amount, "withdraw: not good");
         updatePool(_pid);
-        uint256 pending = user.amount.mul(pool.accFoxPerShare).div(1e12).sub(user.rewardDebt);
+        uint256 pending = user.amount.mul(pool.accDoggyPerShare).div(1e12).sub(user.rewardDebt);
         if (pending > 0) {
-            safeFoxTransfer(msg.sender, pending);
+            safeDoggyTransfer(msg.sender, pending);
             payReferralCommission(msg.sender, pending);
         }
         if (_amount > 0) {
             user.amount = user.amount.sub(_amount);
             pool.lpToken.safeTransfer(address(msg.sender), _amount);
         }
-        user.rewardDebt = user.amount.mul(pool.accFoxPerShare).div(1e12);
+        user.rewardDebt = user.amount.mul(pool.accDoggyPerShare).div(1e12);
         emit Withdraw(msg.sender, _pid, _amount);
     }
 
@@ -246,16 +246,16 @@ contract MasterChef is Ownable, ReentrancyGuard {
         emit EmergencyWithdraw(msg.sender, _pid, amount);
     }
 
-    // Safe fox transfer function, just in case if rounding error causes pool to not have enough FOXs.
-    function safeFoxTransfer(address _to, uint256 _amount) internal {
-        uint256 foxBal = fox.balanceOf(address(this));
+    // Safe doggy transfer function, just in case if rounding error causes pool to not have enough FOXs.
+    function safeDoggyTransfer(address _to, uint256 _amount) internal {
+        uint256 doggyBal = doggy.balanceOf(address(this));
         bool transferSuccess = false;
-        if (_amount > foxBal) {
-            transferSuccess = fox.transfer(_to, foxBal);
+        if (_amount > doggyBal) {
+            transferSuccess = doggy.transfer(_to, doggyBal);
         } else {
-            transferSuccess = fox.transfer(_to, _amount);
+            transferSuccess = doggy.transfer(_to, _amount);
         }
-        require(transferSuccess, "safeFoxTransfer: Transfer failed");
+        require(transferSuccess, "safeDoggyTransfer: Transfer failed");
     }
 
     // Update dev address by the previous dev.
@@ -272,33 +272,33 @@ contract MasterChef is Ownable, ReentrancyGuard {
     // Reduce emission rate by 3% every 9,600 blocks ~ 8hours. This function can be called publicly.
     function updateEmissionRate() public {
         require(block.number > startBlock, "updateEmissionRate: Can only be called after mining starts");
-        require(foxPerBlock > MINIMUM_EMISSION_RATE, "updateEmissionRate: Emission rate has reached the minimum threshold");
+        require(doggyPerBlock > MINIMUM_EMISSION_RATE, "updateEmissionRate: Emission rate has reached the minimum threshold");
 
         uint256 currentIndex = block.number.sub(startBlock).div(EMISSION_REDUCTION_PERIOD_BLOCKS);
         if (currentIndex <= lastReductionPeriodIndex) {
             return;
         }
 
-        uint256 newEmissionRate = foxPerBlock;
+        uint256 newEmissionRate = doggyPerBlock;
         for (uint256 index = lastReductionPeriodIndex; index < currentIndex; ++index) {
             newEmissionRate = newEmissionRate.mul(1e4 - EMISSION_REDUCTION_RATE_PER_PERIOD).div(1e4);
         }
 
         newEmissionRate = newEmissionRate < MINIMUM_EMISSION_RATE ? MINIMUM_EMISSION_RATE : newEmissionRate;
-        if (newEmissionRate >= foxPerBlock) {
+        if (newEmissionRate >= doggyPerBlock) {
             return;
         }
 
         massUpdatePools();
         lastReductionPeriodIndex = currentIndex;
-        uint256 previousEmissionRate = foxPerBlock;
-        foxPerBlock = newEmissionRate;
+        uint256 previousEmissionRate = doggyPerBlock;
+        doggyPerBlock = newEmissionRate;
         emit EmissionRateUpdated(msg.sender, previousEmissionRate, newEmissionRate);
     }
 
-    // Update the fox referral contract address by the owner
-    function setFoxReferral(IFoxReferral _foxReferral) public onlyOwner {
-        foxReferral = _foxReferral;
+    // Update the doggy referral contract address by the owner
+    function setDoggyReferral(IDoggyReferral _doggyReferral) public onlyOwner {
+        doggyReferral = _doggyReferral;
     }
 
     // Update referral commission rate by the owner
@@ -309,12 +309,12 @@ contract MasterChef is Ownable, ReentrancyGuard {
 
     // Pay referral commission to the referrer who referred this user.
     function payReferralCommission(address _user, uint256 _pending) internal {
-        if (address(foxReferral) != address(0) && referralCommissionRate > 0) {
-            address referrer = foxReferral.getReferrer(_user);
+        if (address(doggyReferral) != address(0) && referralCommissionRate > 0) {
+            address referrer = doggyReferral.getReferrer(_user);
             uint256 commissionAmount = _pending.mul(referralCommissionRate).div(10000);
 
             if (referrer != address(0) && commissionAmount > 0) {
-                fox.mint(referrer, commissionAmount);
+                doggy.mint(referrer, commissionAmount);
                 emit ReferralCommissionPaid(_user, referrer, commissionAmount);
             }
         }
